@@ -11,13 +11,17 @@ const Chats = ({ chats }) => {
   const [messageBody, setMessageBody] = useState('');
   const [typingMessage, setTypingMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hoveredMessage, setHoveredMessage] = useState({});
+  const [isMessageEdit, setisMessageEdit] = useState(false);
+  const [tempMessage, setTempMessage] = useState('');
 
   useEffect(() => {
     setMessages(chats);
   }, [chats]);
 
   useEffect(() => {
-    if (!!appSelectedChannel.id) {
+    if (appSelectedChannel && !!appSelectedChannel.id) {
       chatService.findAllMessagesForChannel(appSelectedChannel.id)
       .then((res) => setMessages(res));
     }
@@ -41,6 +45,22 @@ const Chats = ({ chats }) => {
       }
     })
   }, [appSelectedChannel])
+
+  useEffect(() => {
+    socketService.removeMessage((messageList) => {
+      setMessages(messageList);
+      setHoveredMessage({});
+      console.log('message removed');
+    });
+  }, [])
+
+  useEffect(() => {
+    socketService.replaceMessage((messageList) => {
+      setMessages(messageList);
+      setHoveredMessage({});
+      console.log('message updated');
+    });
+  }, [])
 
   const onTyping = ({target: { value }}) => {
     if (!value.length) {
@@ -68,28 +88,84 @@ const Chats = ({ chats }) => {
     setMessageBody('');
   }
 
+  const deleteMessage = () => {
+    socketService.deleteMessage(hoveredMessage.id);
+  }
+
+  const editMessage = () => {
+    if (hoveredMessage.messageBody !== tempMessage) {
+      socketService.updateMessage(hoveredMessage, tempMessage);
+    }
+  }
+
+  const onMouseEnter = (message) => () => {
+    setIsHovered(true);
+    setHoveredMessage(message);
+  }
+
+  const onMouseLeave = () => {
+    setIsHovered(false);
+    setisMessageEdit(false);
+    setTempMessage('');
+    setHoveredMessage({});
+  }
+
   return (
     <div className="chat">
       <div className="chat-header">
-        <h3>#{appSelectedChannel.name} - </h3>
-        <h4>{appSelectedChannel.description}</h4>
+        {
+          appSelectedChannel ?
+          <>
+            <h3>#{appSelectedChannel.name} - </h3>
+            <h4>{appSelectedChannel.description}</h4>
+          </> :
+          null
+        }
       </div>
       <div className="chat-list">
       {!!messages.length ? messages.map((msg) => (
-              <div key={msg.id} className="chat-message">
-                <UserAvatar 
-                  avatar={{ 
-                    avatarName: msg.userAvatar, 
-                    avatarColor: msg.userAvatarColor 
-                  }} 
-                  size="md" 
-                />
-                <div className="chat-user">
-                  <strong>{msg.userName}</strong>
-                  <small>{formatDate(msg.timeStamp)}</small>
-                  <div className="message-body">{msg.messageBody}</div>
-                </div>
+          <div onMouseEnter={onMouseEnter(msg)} onMouseLeave={onMouseLeave} key={msg.id} className="chat-message">
+            <UserAvatar 
+              avatar={{ 
+                avatarName: msg.userAvatar, 
+                avatarColor: msg.userAvatarColor 
+              }} 
+              size="md" 
+            />
+            <div className="chat-user">
+              <div className="message-container">
+                <strong>{msg.userName}</strong>
+                <small>{formatDate(msg.timeStamp)}</small>
+                {
+                  isHovered && (msg.id === hoveredMessage.id) && (authService.name === msg.userName) ?
+                  <div className="message-button-container">
+                    {
+                      !isMessageEdit ?
+                      <>
+                        <button onClick={deleteMessage} className="message-edit-btns">DELETE</button>
+                        <button onClick={() => {setisMessageEdit(true); setTempMessage(msg.messageBody);}} className="message-edit-btns">EDIT</button>
+                      </> :
+                      <>
+                        <button onClick={() => setisMessageEdit(false)} className="message-edit-btns">NEVERMIND</button>
+                        <button onClick={editMessage} className="message-edit-btns">UPDATE MESSAGE</button>
+                      </>
+                    }
+                  </div> :
+                  null
+                }
               </div>
+              {
+                isMessageEdit && (msg.id === hoveredMessage.id) ?
+                <textarea
+                  className="edit-message-textarea" 
+                  onChange={({ target: { value } }) => setTempMessage(value)} 
+                  value={tempMessage} 
+                  placeholder="edit your message boy"
+                /> :
+                <div className="message-body">{msg.messageBody}</div>
+              }
+            </div>
+          </div>
       )) : <div>No Messages</div>}
 
       </div>

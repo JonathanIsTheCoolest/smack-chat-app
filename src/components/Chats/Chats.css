@@ -17,10 +17,18 @@
 .chat-message {
   display: flex;
   padding-bottom: 15px;
+  border-radius: 5px;
+  transition: ease-in-out 0.3s;
+}
+
+.chat-message:hover {
+  background: rgba(211, 201, 210, 0.5);
+  padding: 10px;
 }
 
 .chat-user {
   margin-left: 10px;
+  width: 100%;
 }
 
 .chat-user small {
@@ -62,4 +70,33 @@
 .typing {
   opacity: 0.5;
   padding-left: 10px;
+}
+
+.message-container {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.message-button-container {
+  margin-left: 10px;
+}
+
+.message-edit-btns {
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--sky-blue);
+  transition: ease-in-out 0.2s;
+  cursor: pointer;
+}
+
+.message-edit-btns:hover {
+  color: var(--sky-tint);
+}
+
+.edit-message-textarea {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 5px;
 }

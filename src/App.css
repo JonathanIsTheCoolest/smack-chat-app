@@ -57,13 +57,16 @@ h2, h3, h4, h5 { margin: 0; }
   color: white;
 }
 
-.logout-btn { background: #B33F40; }
+.logout-btn { 
+  border: 1px solid #973537;
+  background: #B33F40; 
+}
 
 .submit-btn:hover { background: #29A370; }
 .logout-btn:hover { background: #973537; }
 
-submit-btn:hover,
-logout-btn:hover {
+.submit-btn:hover,
+.logout-btn:hover {
   cursor: pointer;
 }
 

@@ -68,3 +68,47 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+<!-- Start Updates -->
+Updates
+
+src
+  services.js
+    17-18 -Updated Constants
+    User
+      24 -Added accountId to User constructor
+      49-51 -setAccountId()
+    AuthService
+      120 -findAccountByEmail()
+      127-160 -authenticateUser(), updateUser(), updateAccount()
+      174-204 -findAccountByEmail(), deleteUser(), deleteAccount()
+    ChatService
+      221-225 -deleteChannel()
+      231-235 -deleteMessage()
+      288-297 -deleteMessageDB()
+    SocketService
+      320-322 -deleteChannel()
+      333-339 -removeChannel()
+      348-373 -updateMessage(), replaceMessage(), deleteMessage(), removeMessage()
+  components
+    UserCreate
+      -updated a lot. UserCreate component now funcitons both to create the user and also to update the users information.
+    Modal
+      6-13 -closeModal()
+    ChatApp
+      -added additional useState()'s for keeping track of Modal States and User credetials to Authorize user Deletion
+      57-77 submitDelete
+      implemented new logic in return() to handle Modal rendering.
+    Channels
+      13-15 -new useState()'s for getting hovered channel and Modal state
+      37-43 -new useEffect() to listen for removed channel
+      51-67 -onMouseEnter(), onMouseLeave(), onClickOpenDeleteChannelModal
+      77-86 -deleteChannel()
+      -added additional logic in return() to handle hover and Modals
+    Chats
+      14-17 -new useState()'s for getting hovered message, message appearence, and updating messageBody
+      49-63 -new useEffects()'s that listen for removed and replaced messages
+      91-111 -deleteMessage(), editMessage(), onMouseEnter(), onMouseLeave()
+      -added additional logic in return() to handle hover edit and delete messages
+<!-- End Updates -->

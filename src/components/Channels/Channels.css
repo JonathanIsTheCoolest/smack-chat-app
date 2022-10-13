@@ -45,10 +45,43 @@
   line-height: 2;
   display: inline;
   color: var(--lunar);
+  position: relative;
 }
 
 .channel-label.unread { font-weight: bold; }
 
 .channel-list {
   padding: 20px 0;
+}
+
+.ch-delete-btn,
+.delete-modal-btns {
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+
+.ch-delete-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background-color: rgba(169, 164, 164, 0.5);
+  color: white;
+  cursor: pointer;
+}
+
+.delete-modal-btns {
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px 0;
+  margin: 5px;
+  color: white;
+  background-color: var(--sky-blue);
+  transition: ease-in-out 0.2s;
+  cursor: pointer;
+}
+
+.delete-modal-btns:hover {
+  font-size: 20px;
+  background-color: var(--sky-tint);
 }

@@ -42,3 +42,40 @@ nav h1 {
   display: flex;
   height: calc(100vh - 60px);
 }
+
+.edit-btn {
+  border: 1px solid rgb(0 0 0 / 0%);
+  background-color: var(--sky-blue);
+  border-radius: 5px;
+  padding: 10px 0;
+  margin-bottom: 20px;
+  color: rgb(255 255 255);
+  font-weight: 700;
+  font-size: 15px;
+  transition: ease-in-out 0.2s;
+  cursor: pointer;
+}
+
+.edit-btn:hover {
+  background-color: var(--sky-tint);
+  font-size: 20px;
+}
+
+.delete-account-txt {
+  text-align: center;
+  color: var(--sky-blue);
+  transition: ease-in-out 0.2s;
+  cursor: pointer;
+}
+
+.delete-account-txt:hover {
+  color: var(--sky-blue-tint);
+}
+
+.delete-text {
+  margin-bottom: 20px;
+}
+
+.delete-inputs {
+  width: 100%;
+}

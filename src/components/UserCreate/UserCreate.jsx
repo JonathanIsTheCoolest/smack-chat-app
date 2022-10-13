@@ -7,25 +7,50 @@ import Modal from "../Modal/Modal";
 import UserAvatar from "../UserAvatar/UserAvatar";
 import './UserCreate.css';
 
-const UserCreate = () => {
+const UserCreate = ({ setParentModal, setIsEditUser, logout }) => {
   const { authService } = useContext(UserContext);
+  const { avatarColor: aColor, avatarName: aName, email: uEmail, name: uName, authToken: token, id  } = authService;
+
+  const AVATAR_NAME = aName || '/smack_chat_assets/avatarDefault.png';
+  const AVATAR_COLOR = aColor || 'none';
+
   const navigate = useNavigate();
   const INIT_STATE = {
     userName: '',
     email: '',
     password: '',
-    avatarName: '/smack_chat_assets/avatarDefault.png',
-    avatarColor: 'none',
+    avatarName: AVATAR_NAME,
+    avatarColor: AVATAR_COLOR,
+  }
+  const INIT_STATE_USER_CONFIRM_INFO = {
+    email: '',
+    password: '',
   }
 
-  const [ userInfo, setUserInfo ] = useState(INIT_STATE)
+  const [ userInfo, setUserInfo ] = useState(INIT_STATE);
+  const [ userConfirmInfo , setUserConfirmInfo ] = useState(INIT_STATE_USER_CONFIRM_INFO);
   const [ modal, setModal ] = useState(false);
   const [ error, setError ] = useState(false);
   const [ isLoading, setIsLoading ] = useState(false);
   const [ isLightAvatar, setIsLightAvatar ] = useState(false);
+  const [ confirmModal, setConfirmModal ] = useState(false);
+
+  const USER_NAME = userInfo.userName || uName;
+  const USER_EMAIL = userInfo.email || uEmail;
+  const USER_AVATAR_NAME = userInfo.avatarName || aName;
+  const USER_AVATAR_COLOR = userInfo.avatarColor || aColor;
 
   const onChange = ({ target: { name, value }}) => {
     setUserInfo({...userInfo, [name]: value});
+  }
+
+  const onChangeEditInfo = ({ target: { name, value }}) => {
+    setUserConfirmInfo({...userConfirmInfo, [name]: value});
+  }
+
+  const onClickCloseConfirmModal = () => {
+    setConfirmModal(false);
+    setUserConfirmInfo(INIT_STATE_USER_CONFIRM_INFO);
   }
 
   const chooseAvatar = (avatar) => () => {
@@ -64,6 +89,47 @@ const UserCreate = () => {
     }
   }
 
+  const updateUser = (e) => {
+    e.preventDefault();
+    const { email: userEmail } = authService;
+    const { password, email: enteredEmail } = userConfirmInfo;
+    const userObject = {
+      name: USER_NAME,
+      email: USER_EMAIL,
+      avatarName: USER_AVATAR_NAME,
+      avatarColor: USER_AVATAR_COLOR,
+    };
+    const accountObject = { username: USER_EMAIL };
+    if (!!userEmail && !!password && userEmail === enteredEmail) {
+      authService.authenticateUser(enteredEmail, password).then(() => {
+        authService.updateUser(userObject).then(() => {
+          authService.updateAccount(accountObject).then(() => {
+            authService.setUserData({_id: id, ...userObject});
+            setParentModal(false);
+            setIsEditUser(false);
+            setConfirmModal(false);
+            setUserConfirmInfo(INIT_STATE_USER_CONFIRM_INFO);
+          }).catch((error) => {
+            console.error('authenticating user', error.response.data);
+          })
+        }).catch((error) => {
+          console.error('updating user', error.response.data);
+        })
+      }).catch((error) => {
+        console.error('updating account', error.response.data);
+      })
+    }
+  }
+
+  const openConfirmEditModule = (e) => {
+    const { userName, email, avatarName, avatarColor } = userInfo;
+    e.preventDefault();
+    if (userName.length || email.length || avatarName !== AVATAR_NAME || avatarColor !== AVATAR_COLOR ) {
+      console.log('Hello World');
+      setConfirmModal(true);
+    }
+  }
+
   const avatarArrayFunciton = (avatarArray) => {
     return avatarArray.map((img) => (
       <div role="presentation" key={img} className="create-avatar" onClick={chooseAvatar(img)}>
@@ -76,18 +142,22 @@ const UserCreate = () => {
   const errorMsg = 'Error creating account. Please try again.'
   return (
     <>
-      <div className="center-display">
+      <div className={ token ? 'center-display-as-modal' : 'center-display' }>
         {error ? <Alert message={errorMsg} type="alert-danger"/> : null}
         {isLoading ? <div>Loading...</div> : null}
-        <h3 className="title">Create an account</h3>
-        <form onSubmit={createUser} className="form">
+        {
+          !!token ?
+          null :
+          <h3 className="title">Create an account</h3>
+        }
+        <form onSubmit={token ? openConfirmEditModule : createUser} className={token ? "modal-form" : "form"}>
           <input
             onChange={onChange}
             value={userName} 
             type="text" 
             className="form-control" 
             name="userName" 
-            placeholder="enter username"
+            placeholder={token ? 'enter new username' : 'enter username'}
           />
           <input
             onChange={onChange}
@@ -95,23 +165,32 @@ const UserCreate = () => {
             type="email" 
             className="form-control" 
             name="email" 
-            placeholder="enter email"/>
-          <input
-            onChange={onChange}
-            value={password} 
-            type="password" 
-            className="form-control" 
-            name="password" 
-            placeholder="enter password"
+            placeholder={token ? 'enter new email' : 'enter email'}
           />
+          {
+            !token ?
+            <input
+              onChange={onChange}
+              value={password} 
+              type="password" 
+              className="form-control" 
+              name="password" 
+              placeholder={token ? 'enter new password' : 'enter password'}
+            />:
+            null
+          }
           <div className="avatar-container">
             <UserAvatar avatar={{ avatarName, avatarColor }} className="create-avatar" />
             <div onClick={() => setModal(true)} className="avatar-text">Choose avatar</div>
             <div onClick={generateBgColor} className="avatar-text">Generate background color</div>
           </div>
-          <input className="submit-btn" type="submit" value="Create Account" />
+          {
+            token ?
+            <input className="submit-btn" type="submit" value="Edit Account" /> :
+            <input className="submit-btn" type="submit" value="Create Account" />
+          }
         </form>
-        <div className="footer-text">Already have an Account? Login <Link to="/login" state={{prevPath: '/'}}>HERE</Link></div>
+        { token ? null : <div className="footer-text">Already have an Account? Login <Link to="/login" state={{prevPath: '/'}}>HERE</Link></div> }
       </div>
       <Modal title="Choose Avatar" isOpen={modal} close={() => setModal(false)} isLightAvatar={isLightAvatar}>
         <div className="modal-radio-wrapper">
@@ -130,170 +209,29 @@ const UserCreate = () => {
           }
         </div>
       </Modal>
+      <Modal title="User Confirmation" isOpen={confirmModal} close={onClickCloseConfirmModal}>
+        <form onSubmit={updateUser}>
+          <input
+            onChange={onChangeEditInfo}
+            value={userConfirmInfo.email} 
+            type="email" 
+            className="form-control confirm-inputs" 
+            name="email" 
+            placeholder="enter current email"
+          />
+          <input
+            onChange={onChangeEditInfo}
+            value={userConfirmInfo.password} 
+            type="password" 
+            className="form-control confirm-inputs" 
+            name="password" 
+            placeholder="enter current password"
+          /> 
+          <input className="submit-btn" type="submit" value="Confirm Edit" />
+        </form>
+      </Modal>
     </>
   );
 }
 
 export default UserCreate;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import React,{ useState, useContext } from "react";
-// import { Link, useNavigate } from "react-router-dom";
-// import { UserContext } from "../../App";
-// import { AVATARS } from "../../constants";
-// import Alert from "../Alert/Alert";
-// import Modal from "../Modal/Modal";
-// import './UserCreate.css';
-
-// const UserCreate = () => {
-//   const { authService } = useContext(UserContext);
-//   const navigate = useNavigate();
-//   const INIT_STATE = {
-//     userName: '',
-//     email: '',
-//     password: '',
-//     avatarName: '/smack_chat_assets/avatarDefault.png',
-//     avatarColor: 'none',
-//   }
-
-//   const [ userInfo, setUserInfo ] = useState(INIT_STATE)
-//   const [ modal, setModal ] = useState(false);
-//   const [error, setError] = useState(false);
-//   const [isLoading, setIsLoading] = useState(false);
-
-//   const onChange = ({ target: { name, value }}) => {
-//     setUserInfo({...userInfo, [name]: value});
-//   }
-
-//   const chooseAvatar = (avatar) => () => {
-//     setUserInfo({...userInfo, avatarName: avatar});
-//     setModal(false);
-//   }
-
-//   const generateBgColor = () => {
-//     const randomColor = Math.floor(Math.random() * 16777215).toString(16);
-//     setUserInfo({...userInfo, avatarColor: `#${randomColor}`});
-//   }
-
-//   const createUser = (e) => {
-//     e.preventDefault();
-//     const { userName, email, password, avatarName, avatarColor } = userInfo;
-//     if (!!userName && !!email && !!password) {
-//       setIsLoading(true)
-//       authService.registerUser(email, password).then(() => {
-//         authService.loginUser(email, password).then(() => {
-//           authService.createUser(userName, email, avatarName, avatarColor).then(() => {
-//             setUserInfo(INIT_STATE);
-//             navigate('/');
-//           }).catch((error) => {
-//             console.error('creating user',error.response.data)
-//             setError(true);
-//           })
-//         }).catch((error) => {
-//           console.error('logging in user',error.response.data)
-//           setError(true);
-//         })
-//       }).catch((error) => {
-//         console.error('registering user',error.response.data)
-//         setError(true);
-//       })
-//       setIsLoading(false);
-//     }
-//   }
-
-//   const { userName, email, password, avatarName, avatarColor } = userInfo;
-//   const errorMsg = 'Error creating account. Please try again.'
-//   return (
-//     <>
-//       <div className="center-display">
-//         {error ? <Alert message={errorMsg} type="alert-danger"/> : null}
-//         {isLoading ? <div>Loading...</div> : null}
-//         <h3 className="title">Create an account</h3>
-//         <form onSubmit={createUser} className="form">
-//           <input
-//             onChange={onChange}
-//             value={userName} 
-//             type="text" 
-//             className="form-control" 
-//             name="userName" 
-//             placeholder="enter username"
-//           />
-//           <input
-//             onChange={onChange}
-//             value={email} 
-//             type="email" 
-//             className="form-control" 
-//             name="email" 
-//             placeholder="enter email"/>
-//           <input
-//             onChange={onChange}
-//             value={password} 
-//             type="password" 
-//             className="form-control" 
-//             name="password" 
-//             placeholder="enter password"
-//           />
-//           <div className="avatar-container">
-//             <img style={{ backgroundColor: avatarColor }} className="avatar-icon avatar-b-radius" src={avatarName} alt="avatar"/>
-//             <div onClick={() => setModal(true)} className="avatar-text">Choose avatar</div>
-//             <div onClick={generateBgColor} className="avatar-text">Generate background color</div>
-//           </div>
-//           <input className="submit-btn" type="submit" value="Create Account" />
-//         </form>
-//         <div className="footer-text">Already have an Account? Login <Link to="/login">HERE</Link></div>
-//       </div>
-//       <Modal title="Choose Avatar" isOpen={modal} close={() => setModal(false)}>
-//         <div className="avatar-list">
-//           {AVATARS.map((img) => (
-//             <div role="presentation" key={img} className="avatar-icon" onClick={chooseAvatar(img)}>
-//               <img src={img} alt="avatar" />
-//             </div>
-//           ))}
-//         </div>
-//       </Modal>
-//     </>
-//   );
-// }
-
-// export default UserCreate;

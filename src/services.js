@@ -10,14 +10,18 @@ const URL_USER = `${BASE_URL}/user`;
 const URL_USER_ADD = `${URL_USER}/add`;
 const URL_USER_BY_EMAIL = `${URL_USER}/byEmail/`;
 
+const URL_ACCOUNT_BY_EMAIL = `${URL_ACCOUNT}/byEmail/`;
+
 const URL_GET_CHANNELS = `${BASE_URL}/channel`;
 
-const URL_GET_MESSAGES = `${BASE_URL}/message/byChannel/`;
+const URL_MESSAGE = `${BASE_URL}/message`;
+const URL_GET_MESSAGES = `${URL_MESSAGE}/byChannel/`;
 
 const headers = { "Content-Type": "application/json" };
 
 class User {
   constructor() {
+    this.accountId = "";
     this.id = "";
     this.name = "";
     this.email = "";
@@ -40,6 +44,10 @@ class User {
     this.email = email;
     this.avatarName = avatarName;
     this.avatarColor = avatarColor;
+  }
+
+  setAccountId(accountId) {
+    this.accountId = accountId;
   }
 }
 
@@ -92,7 +100,7 @@ export class AuthService extends User {
       "avatarColor": avatarColor,
     }
     try {
-      const response = await axios.post(URL_USER_ADD, body, {headers});
+      const response = await axios.post(URL_USER_ADD, body, { headers });
       this.setUserData(response.data);
     } catch(error) {
       console.error(error);
@@ -109,6 +117,42 @@ export class AuthService extends User {
       this.setUserEmail(response.data.user);
       this.setIsLoggedIn(true);
       await this.findUserByEmail();
+      await this.findAccountByEmail();
+    } catch (error) {
+      console.error(error);
+		  throw error;
+    }
+  }
+
+  async authenticateUser(email, password) {
+    const body = { email: email.toLowerCase(), password: password };
+    try {
+      const response = await axios.post(URL_LOGIN, body, { headers });
+      return response;
+    } catch (error) {
+      console.error(error);
+		  throw error;
+    }
+  }
+
+  async updateUser(userObject) {
+    const headers = this.getBearerHeader();
+    const body = userObject;
+    try {
+      const response = await axios.put(`${URL_USER}/${this.id}`, body, { headers });
+      console.log(response);
+    } catch (error) {
+      console.error(error);
+		  throw error;
+    }
+  }
+
+  async updateAccount(email) {
+    const headers = this.getBearerHeader();
+    const body = email;
+    try {
+      const response = await axios.put(`${URL_ACCOUNT}/${this.accountId}`, body, { headers });
+      console.log(response);
     } catch (error) {
       console.error(error);
 		  throw error;
@@ -122,6 +166,38 @@ export class AuthService extends User {
         headers,
       });
       this.setUserData(response.data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async findAccountByEmail() {
+    const headers = this.getBearerHeader();
+    try {
+      const response = await axios.get(URL_ACCOUNT_BY_EMAIL + this.email, {
+        headers,
+      });
+      this.setAccountId(response.data._id);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async deleteUser() {
+    const headers = this.getBearerHeader();
+    try {
+      const response = await axios.delete(`${URL_USER}/${this.id}`, { headers });
+      console.log(response);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async deleteAccount() {
+    const headers = this.getBearerHeader();
+    try {
+      const response = await axios.delete(`${URL_ACCOUNT}/${this.email}`, { headers });
+      console.log(response);
     } catch (error) {
       console.error(error);
     }
@@ -142,11 +218,21 @@ export class ChatService {
         this.channels.push(channel)
       }
   };
+  deleteChannel = (channelId) => {
+    this.channels.map((item, index) => (
+      item.id === channelId ? this.channels.splice(index, 1) : null
+    ))
+  }
   addMessage = (chat) => {
       if (!this.messages.length || (this.messages[this.messages.length - 1].id !== chat.id)) {
         this.messages.push(chat)
       }
   };
+  deleteMessage = (messageId) => {
+    this.messages.map((item, index) => (
+      item.id === messageId ? this.messages.splice(index, 1) : null
+    ))
+  }
   setSelectedChannel = (channel) => this.selectedChannel = channel;
   getSelectedChannel = () => this.selectedChannel;
   getAllChannels = () => this.channels;
@@ -198,6 +284,17 @@ export class ChatService {
       throw error;
     }
   }
+
+  async deleteMessageDB(messageId, auth) {
+    const headers = auth;
+    try{
+      const response = await axios.delete(`${URL_MESSAGE}/${messageId}`, { headers });
+      console.log(response);
+    } catch(error) {
+      console.error(error);
+      throw error;
+    }
+  }
 }
 
 export class SocketService {
@@ -220,10 +317,22 @@ export class SocketService {
     this.socket.emit('newChannel', name, description);
   }
 
+  deleteChannel(channelId, cb) {
+    this.socket.emit('deleteChannel', channelId, cb);
+  }
+
   getChannel(cb) {
     this.socket.on('channelCreated', (name, description, id) => {
       const channel = {name, description, id};
       this.chatService.addChannel(channel);
+      const channelList = this.chatService.getAllChannels();
+      cb(channelList);
+    })
+  }
+
+  removeChannel(cb) {
+    this.socket.on('channelDeleted', channelId => {
+      this.chatService.deleteChannel(channelId)
       const channelList = this.chatService.getAllChannels();
       cb(channelList);
     })
@@ -234,6 +343,33 @@ export class SocketService {
     if (!!messageBody && !!channelId && !!user) {
       this.socket.emit('newMessage', messageBody, userId, channelId, userName, userAvatar, userAvatarColor);
     }
+  }
+
+  updateMessage(message, newMessage) {
+    this.socket.emit('updateMessage', message, newMessage);
+  }
+
+  replaceMessage(cb) {
+    this.socket.on('messageUpdated', (messageBody, userId, channelId, userName, userAvatar, userAvatarColor, id, timeStamp) => {
+      const chat = { messageBody, userId, channelId, userName, userAvatar, userAvatarColor, id, timeStamp };
+      this.chatService.messages.map((item, index) => (
+        item.id === id ? this.chatService.messages.splice(index, 1, chat) : null
+      ))
+      const messageList = this.chatService.messages;
+      cb(messageList);
+    })
+  }
+
+  deleteMessage(messageId) {
+    this.socket.emit('deleteMessage', messageId);
+  }
+
+  removeMessage(cb) {
+    this.socket.on('messageDeleted', messageId => {
+      this.chatService.deleteMessage(messageId)
+      const messageList = this.chatService.messages;
+      cb(messageList);
+    })
   }
 
   getChatMessage(cb) {
