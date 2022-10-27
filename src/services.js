@@ -285,6 +285,27 @@ export class ChatService {
     }
   }
 
+  async findAllMessagesForUser(userId) {
+    const headers = this.getAuthHeader();
+    try {
+      let response = await axios.get(`${URL_MESSAGE}/byUser/` + userId, { headers });
+      response = response.data.map((msg) => ({
+        id: msg._id,
+        messageBody: msg.messageBody,
+        userId: msg.userId,
+        channelId: msg.channelId,
+      }));
+      this.messages = response;
+      
+      console.log(response);
+      return response;
+    } catch(error) {
+      console.error(error);
+      this.messages = [];
+      throw error;
+    }
+  }
+
   async deleteMessageDB(messageId, auth) {
     const headers = auth;
     try{
@@ -350,13 +371,21 @@ export class SocketService {
   }
 
   replaceMessage(cb) {
-    this.socket.on('messageUpdated', (messageBody, userId, channelId, userName, userAvatar, userAvatarColor, id, timeStamp) => {
-      const chat = { messageBody, userId, channelId, userName, userAvatar, userAvatarColor, id, timeStamp };
-      this.chatService.messages.map((item, index) => (
-        item.id === id ? this.chatService.messages.splice(index, 1, chat) : null
-      ))
-      const messageList = this.chatService.messages;
-      cb(messageList);
+    this.socket.on('messageUpdated', () => {
+      this.chatService.findAllMessagesForChannel(this.chatService.selectedChannel.id).then((response) => {
+        cb(response);
+      })
+    })
+  }
+
+  async replaceAllUserMessages(userId, newMessage) {
+    console.log(this.messages);
+    await this.chatService.findAllMessagesForUser(userId).then((response) => {
+      console.log(response);
+      for (const message of response) {
+        const newObject = ({...message, ...newMessage});
+        this.updateMessage(message, newObject);
+      }
     })
   }
 

@@ -8,7 +8,7 @@ import UserAvatar from "../UserAvatar/UserAvatar";
 import './UserCreate.css';
 
 const UserCreate = ({ setParentModal, setIsEditUser, logout }) => {
-  const { authService } = useContext(UserContext);
+  const { authService, socketService } = useContext(UserContext);
   const { avatarColor: aColor, avatarName: aName, email: uEmail, name: uName, authToken: token, id  } = authService;
 
   const AVATAR_NAME = aName || '/smack_chat_assets/avatarDefault.png';
@@ -105,6 +105,7 @@ const UserCreate = ({ setParentModal, setIsEditUser, logout }) => {
         authService.updateUser(userObject).then(() => {
           authService.updateAccount(accountObject).then(() => {
             authService.setUserData({_id: id, ...userObject});
+            socketService.replaceAllUserMessages(id, userObject);
             setParentModal(false);
             setIsEditUser(false);
             setConfirmModal(false);
@@ -121,11 +122,42 @@ const UserCreate = ({ setParentModal, setIsEditUser, logout }) => {
     }
   }
 
+  // const updateUser = (e) => {
+  //   e.preventDefault();
+  //   const { email: userEmail } = authService;
+  //   const { password, email: enteredEmail } = userConfirmInfo;
+  //   const userObject = {
+  //     name: USER_NAME,
+  //     email: USER_EMAIL,
+  //     avatarName: USER_AVATAR_NAME,
+  //     avatarColor: USER_AVATAR_COLOR,
+  //   };
+  //   const accountObject = { username: USER_EMAIL };
+  //   if (!!userEmail && !!password && userEmail === enteredEmail) {
+  //     authService.authenticateUser(enteredEmail, password).then(() => {
+  //       authService.updateUser(userObject).then(() => {
+  //         authService.updateAccount(accountObject).then(() => {
+  //           authService.setUserData({_id: id, ...userObject});
+  //           setParentModal(false);
+  //           setIsEditUser(false);
+  //           setConfirmModal(false);
+  //           setUserConfirmInfo(INIT_STATE_USER_CONFIRM_INFO);
+  //         }).catch((error) => {
+  //           console.error('authenticating user', error.response.data);
+  //         })
+  //       }).catch((error) => {
+  //         console.error('updating user', error.response.data);
+  //       })
+  //     }).catch((error) => {
+  //       console.error('updating account', error.response.data);
+  //     })
+  //   }
+  // }
+
   const openConfirmEditModule = (e) => {
     const { userName, email, avatarName, avatarColor } = userInfo;
     e.preventDefault();
     if (userName.length || email.length || avatarName !== AVATAR_NAME || avatarColor !== AVATAR_COLOR ) {
-      console.log('Hello World');
       setConfirmModal(true);
     }
   }

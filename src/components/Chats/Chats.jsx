@@ -94,7 +94,8 @@ const Chats = ({ chats }) => {
 
   const editMessage = () => {
     if (hoveredMessage.messageBody !== tempMessage) {
-      socketService.updateMessage(hoveredMessage, tempMessage);
+      const messageObject = { messageBody: tempMessage }
+      socketService.updateMessage(hoveredMessage, messageObject);
     }
   }
 
